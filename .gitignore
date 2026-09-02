@@ -1,0 +1,17 @@
+# --- R ------------------------------------------------------------------------
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# --- OS -----------------------------------------------------------------------
+.DS_Store
+
+# --- Assessment materials: must NOT reach a public repository -----------------
+# NOTE: deliberately no blanket *.pdf rule - Q3 may output ae_summary_table.pdf.
+ADS Programmer Coding Assessment.pdf
+*aCRF*.pdf
+CLAUDE.md
+
+# NOTE: run_log.txt files are deliverables (proof of an error-free run)
+#       and are intentionally NOT ignored.
