@@ -12,7 +12,7 @@
 #                 (bar chart or heatmap)
 #   - PNG plot 2: top 10 most frequent AEs (AETERM) with 95% CI for
 #                 incidence rates
-#   - question_3_tlg/run_log.txt   console log proving an error-free run
+#   - question_3_tlg/run_log_02.txt   console log proving an error-free run
 #     (file names for both PNGs TBD - record them in the README)
 #
 # Author: Maksim Sendetski

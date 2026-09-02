@@ -13,7 +13,7 @@
 #       Rows:    AETERM or AESOC (choice documented in README)
 #       Columns: treatment groups (ACTARM) plus a total column of all subjects
 #       Cells:   count (n) and percentage (%), sorted by descending frequency
-#   - question_3_tlg/run_log.txt   console log proving an error-free run
+#   - question_3_tlg/run_log_01.txt   console log proving an error-free run
 #
 # Author: Maksim Sendetski
 # Date:   2026-09-02

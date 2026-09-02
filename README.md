@@ -35,7 +35,8 @@ roche-ads-assessment/
 ├── question_3_tlg/
 │   ├── 01_create_ae_summary_table.R       TEAE summary table via {gtsummary}
 │   ├── 02_create_visualizations.R         two AE figures via {ggplot2}
-│   ├── run_log.txt                        console log, proof of error-free run
+│   ├── run_log_01.txt                     console log for the table script
+│   ├── run_log_02.txt                     console log for the figures script
 │   ├── ae_summary_table.html              table output (or .docx / .pdf)
 │   └── *.png                              two AE plots
 └── question_4_genai/                      Python GenAI assistant (bonus)
@@ -74,8 +75,8 @@ not. This is intentional, not an oversight.
 | **Objective** | Produce a treatment-emergent adverse event (TEAE) summary table and two adverse event figures, in the style of the FDA TLG catalogue (Table 10). |
 | **Input datasets** | `pharmaverseadam::adae` (TEAEs are records with `TRTEMFL == "Y"`) and `pharmaverseadam::adsl`. |
 | **Output artifacts** | `ae_summary_table.html` (or `.docx` / `.pdf`) — rows by `AETERM` or `AESOC`, columns by treatment group (`ACTARM`) plus a total column of all subjects, cells as count (n) and percentage (%), sorted by descending frequency. Two PNG plots: AE severity (`AESEV`) distribution by treatment, and the top 10 most frequent AEs (`AETERM`) with 95% confidence intervals for the incidence rates. |
-| **How to run** | `Rscript question_3_tlg/01_create_ae_summary_table.R > question_3_tlg/run_log.txt 2>&1` then `Rscript question_3_tlg/02_create_visualizations.R >> question_3_tlg/run_log.txt 2>&1` (note the appending `>>` on the second script, so both runs land in one log). |
-| **Log evidence** | `question_3_tlg/run_log.txt` |
+| **How to run** | `Rscript question_3_tlg/01_create_ae_summary_table.R > question_3_tlg/run_log_01.txt 2>&1` and `Rscript question_3_tlg/02_create_visualizations.R > question_3_tlg/run_log_02.txt 2>&1` — one log per script, see the log convention below. |
+| **Log evidence** | `question_3_tlg/run_log_01.txt` and `question_3_tlg/run_log_02.txt` |
 
 ### Question 4 — GenAI clinical data assistant (Python, bonus)
 
@@ -101,6 +102,19 @@ Rscript <path/to/script.R> > <folder>/run_log.txt 2>&1
 than only its happy path. These logs are deliverables — the assessment asks for "a text
 file/log file as evidence for code running error-free" — so they are tracked in git and
 explicitly **not** ignored.
+
+**Question 3 is the exception: one log per script, not one per folder.** The deliverables
+list is written in the singular ("A text file/log file") for Questions 1 and 2, both of
+which have a single script, but in the plural ("Text files/log files") for Question 3,
+which is the only question with two scripts. Question 3 therefore produces two logs, each
+one the untouched output of a single run:
+
+```
+Rscript question_3_tlg/01_create_ae_summary_table.R > question_3_tlg/run_log_01.txt 2>&1
+Rscript question_3_tlg/02_create_visualizations.R   > question_3_tlg/run_log_02.txt 2>&1
+```
+
+Questions 1 and 2 keep their single `run_log.txt`.
 
 Recommendation: end each R script with a call to `sessionInfo()`. The log then also
 captures the R version, the platform and the exact versions of every attached package,
