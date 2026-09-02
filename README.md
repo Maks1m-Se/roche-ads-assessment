@@ -122,7 +122,8 @@ which lets a reviewer who was not at the keyboard reproduce and audit the run.
 
 ## 4. Environment & reproducibility
 
-- **R version:** 4.2.0 or above.
+- **R version:** the assessment requires R 4.2.0 or above; this repository was
+  developed and run on R 4.6.1.
 - **Platform used:** Windows 11 / PowerShell (the log convention above is verified there);
   the commands are identical on macOS and Linux.
 - **Python version (Question 4):** 3.10 or above.
@@ -164,8 +165,9 @@ bottom.*
 
 ## 6. References
 
-- Subject Disposition aCRF — mock-up eCRF with the General Notes for Question 1 (GitHub) — *link TBD*
-- CDISC SDTM Implementation Guide v3.4 — *link TBD*
+- Subject Disposition aCRF — mock-up eCRF with the General Notes for Question 1:
+  https://github.com/pharmaverse/pharmaverseraw/blob/main/vignettes/articles/aCRFs/Subject_Disposition_aCRF.pdf
+- CDISC SDTM Implementation Guide v3.4: https://www.cdisc.org/standards/foundational/sdtmig
 - Pharmaverse examples: https://pharmaverse.github.io/examples/
 - `{sdtm.oak}` documentation: https://pharmaverse.github.io/sdtm.oak/
 - `{admiral}` documentation: https://pharmaverse.github.io/admiral/
