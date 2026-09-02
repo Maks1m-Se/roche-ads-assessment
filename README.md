@@ -145,8 +145,13 @@ install.packages(c(
 ))
 ```
 
-The package versions actually used are recorded by `sessionInfo()` at the bottom of each
-`run_log.txt`.
+This command was verified to install everything from CRAN as-is on 2026-09-02, with the
+versions: `sdtm.oak` 0.2.0, `pharmaverseraw` 0.1.1, `admiral` 1.5.0, `pharmaversesdtm`
+1.5.0, `pharmaverseadam` 1.3.0, `gtsummary` 2.6.0, `gt` 1.3.0, `ggplot2` 4.0.3, `dplyr`
+1.2.1, `tidyr` 1.3.2.
+
+The package versions actually used for each run are also recorded by `sessionInfo()` at
+the bottom of every log file.
 
 ## 5. Notes on spec decisions
 
@@ -167,7 +172,7 @@ bottom.*
 
 - Subject Disposition aCRF — mock-up eCRF with the General Notes for Question 1:
   https://github.com/pharmaverse/pharmaverseraw/blob/main/vignettes/articles/aCRFs/Subject_Disposition_aCRF.pdf
-- CDISC SDTM Implementation Guide v3.4: https://www.cdisc.org/standards/foundational/sdtmig
+- CDISC SDTM Implementation Guide v3.4: https://www.cdisc.org/standards/foundational/sdtmig/sdtmig-v3-4
 - Pharmaverse examples: https://pharmaverse.github.io/examples/
 - `{sdtm.oak}` documentation: https://pharmaverse.github.io/sdtm.oak/
 - `{admiral}` documentation: https://pharmaverse.github.io/admiral/
