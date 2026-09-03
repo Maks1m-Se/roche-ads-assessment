@@ -164,6 +164,9 @@ to reverse-engineer it from the code.
 | 1 | Q4 | The input file is named `adae.csv`, but the spec sources it from `pharmaversesdtm::ae` — an SDTM AE dataset, not an ADaM ADAE. | Follow the spec literally: export `pharmaversesdtm::ae` and save it under the file name `adae.csv`. The columns the agent must map to (`AESEV`, `AETERM`, `AESOC`) all exist in SDTM `ae`. |
 | 2 | Q3 | Table rows: `AETERM` **or** `AESOC` — the spec permits either. | TBD — choice and rationale to be documented here once the table is built. |
 | 3 | Q1 | `DSSTDY` reference start date. | TBD |
+| 4 | Q3 | AE incidence counting level | Count at subject level, not record level — a subject with five HEADACHE records is one subject with headache. Applies to the summary table and to Plot 2. |
+| 5 | Q3 | Denominator for percentages | Subjects per treatment arm from `pharmaverseadam::adsl`, not subjects with AEs from `adae`. This is why the spec lists `adsl` as a Q3 input. |
+| 6 | Q3 | Confidence interval method for Plot 2 | Clopper-Pearson, as stated in the sample output subtitle in the assessment PDF. Use an established function, do not hand-roll. |
 
 *Extend this table as further decisions are made — one row per decision, newest at the
 bottom.*
