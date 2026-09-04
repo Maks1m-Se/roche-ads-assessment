@@ -17,6 +17,4 @@
 #
 # Author: Maksim Sendetski
 # Date:   2026-09-02
-#
-# NOTE: implementation to be written by hand
 # ------------------------------------------------------------------------------
