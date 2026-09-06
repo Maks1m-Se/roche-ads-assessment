@@ -1,43 +1,46 @@
 
 ================ VALIDATION ================
 
-[1] Population and TEAE subset
-  Treated subjects (denominator): 254  OK (expected 254)
-  Screen Failure excluded: OK
-  Safety population, SAFFL == 'Y': 254  OK (expected 254)
-  SAFFL population and the 3 treatment arms are the same subjects: OK
-  TEAE records: 1122  OK (expected 1122)
-  All TEAE subjects present in the denominator population: OK
+[1] Analysis population - all ADAE records
+  ADAE records used: 1191  OK (expected 1191, the full dataset)
+  No TRTEMFL filter applied: OK
+  Denominator, unique USUBJID in ADAE: 225  OK (matches the sample's n = 225)
+
+  For reference, the populations NOT used here:
+    TREATMENT-EMERGENT subset : 1122 records, 217 subjects  (the summary table's population)
+    SAFETY population (ADSL)  : 254 subjects  (the conventional incidence denominator)
+    Subjects treated but with no AE at all: 29 
+  Using 225 rather than 254 raises every incidence rate by a factor of 1.129 
 
 [2] Plot 1 - AESEV x ACTARM record counts (the matrix behind the bars)
           Arm
 Severity   Placebo Xanomeline High Dose Xanomeline Low Dose  Sum
-  MILD         210                  286                 232  728
-  MODERATE      65                  118                 170  353
-  SEVERE         6                   10                  25   41
-  Sum          281                  414                 427 1122
+  MILD         219                  300                 251  770
+  MODERATE      74                  126                 178  378
+  SEVERE         8                   10                  25   43
+  Sum          301                  436                 454 1191
   Severity factor levels in order: MILD < MODERATE < SEVERE 
-  Records in matrix vs TEAE records: 1122 vs 1122  OK
+  Records in matrix vs ADAE records: 1191 vs 1191  OK
 
 [3] Plot 2 - top 10 terms, subject counts, incidence and 95% CI
                         AETERM n_of_N incidence_pct ci_lower_pct ci_upper_pct
-1                     PRURITUS 54/254         21.26        16.39        26.81
-2    APPLICATION SITE PRURITUS 50/254         19.69        14.98        25.11
-3                     ERYTHEMA 36/254         14.17        10.13        19.08
-4    APPLICATION SITE ERYTHEMA 30/254         11.81         8.11        16.43
-5                         RASH 26/254         10.24         6.80        14.64
-6  APPLICATION SITE DERMATITIS 21/254          8.27         5.19        12.36
-7  APPLICATION SITE IRRITATION 21/254          8.27         5.19        12.36
-8                    DIZZINESS 21/254          8.27         5.19        12.36
-9                    DIARRHOEA 17/254          6.69         3.95        10.50
-10           SINUS BRADYCARDIA 17/254          6.69         3.95        10.50
+1                     PRURITUS 57/225         25.33        19.79        31.54
+2    APPLICATION SITE PRURITUS 50/225         22.22        16.97        28.23
+3                     ERYTHEMA 38/225         16.89        12.24        22.44
+4    APPLICATION SITE ERYTHEMA 30/225         13.33         9.18        18.48
+5                         RASH 29/225         12.89         8.80        17.98
+6                    DIZZINESS 22/225          9.78         6.23        14.43
+7  APPLICATION SITE DERMATITIS 21/225          9.33         5.87        13.91
+8  APPLICATION SITE IRRITATION 21/225          9.33         5.87        13.91
+9                    DIARRHOEA 18/225          8.00         4.81        12.35
+10           SINUS BRADYCARDIA 17/225          7.56         4.46        11.82
   Rows selected: 10  OK (exactly 10)
   Point estimate inside its own CI for every term: OK
   Subject counts strictly non-increasing (descending sort): OK
 
 [4] Output files
-   question_3_tlg/ae_severity_by_treatment.png : written = TRUE , bytes = 73594  OK
-   question_3_tlg/ae_top10_incidence_ci.png : written = TRUE , bytes = 61194  OK
+   question_3_tlg/ae_severity_by_treatment.png : written = TRUE , bytes = 73773  OK
+   question_3_tlg/ae_top10_incidence_ci.png : written = TRUE , bytes = 62587  OK
 
 ============== END VALIDATION ==============
 

@@ -4,8 +4,10 @@
 # Purpose: Produce the two adverse event figures requested in the assessment.
 #
 # Input dataset(s):
-#   - pharmaverseadam::adae   adverse events (AESEV, AETERM), TEAEs are TRTEMFL == "Y"
-#   - pharmaverseadam::adsl   subject level data (denominator, ACTARM)
+#   - pharmaverseadam::adae   adverse events (AESEV, AETERM) - ALL records, not
+#                             the TRTEMFL == "Y" subset; see section 1
+#   - pharmaverseadam::adsl   subject level data, used only to report the
+#                             alternative denominator in the validation block
 #
 # Output(s):
 #   - question_3_tlg/ae_severity_by_treatment.png
@@ -31,30 +33,41 @@ suppressPackageStartupMessages({
 adae <- pharmaverseadam::adae
 adsl <- pharmaverseadam::adsl
 
-# Same population rule as the summary table in 01_create_ae_summary_table.R: ADSL
-# carries a fourth ACTARM, "Screen Failure" (52 subjects screened but never
-# treated), who were never at risk of a treatment-emergent event. The denominator
-# is the three treatment arms, N = 254.
+# These figures use ALL adverse event records, not the treatment-emergent subset.
+# That is a deliberate divergence from the summary table in
+# 01_create_ae_summary_table.R, and it comes from the specification itself: the
+# table task states the TRTEMFL == "Y" restriction explicitly, the two plot tasks
+# do not mention TRTEMFL at all, and the supplied sample output for Plot 2 is
+# labelled "n = 225 subjects". ADAE contains exactly 225 unique USUBJID; its
+# treatment-emergent subset contains 217. The sample therefore describes the
+# unfiltered dataset, and it is the operative specification for these figures.
 #
-# That set has a name: it is exactly the Safety population. ADSL flags it as
-# SAFFL == "Y", which selects 254 subjects - the same 254, subject for subject,
-# that the three treatment arms select (asserted in the validation block below).
-# The Safety population is the standard denominator for adverse event incidence,
-# because it is defined as the subjects who received any study drug and were
-# therefore at risk of a treatment-emergent event. The ACTARM filter is kept as
-# the operative definition so that this script and the summary table select the
-# population the same way; SAFFL is verified against it rather than substituted
-# for it.
+# The asymmetry is in the assessment, not introduced here. Each output follows the
+# instruction it was given.
 
+ae_all <- adae
+
+# Denominator for Plot 2: the subjects present in ADAE, derived from the data
+# rather than written in, so the figure and its label cannot drift apart.
+#
+# This follows the sample output. It is worth being explicit that it is not the
+# more conventional clinical choice: an incidence rate normally divides by
+# everyone who could have reported the event, which is the Safety population from
+# ADSL - the three treatment arms, N = 254, as the summary table uses (and as
+# SAFFL == "Y" independently selects). Dividing by 225 instead uses only the
+# subjects who actually had at least one adverse event, which omits the 29 treated
+# subjects who had none and so reports a somewhat higher rate for every term. Both
+# denominators are computed in the validation block so the difference is visible
+# rather than buried. The sample is followed because it is the specification for
+# this figure.
+
+n_subjects_adae <- length(unique(adae$USUBJID))
+
+# Retained for the validation block only, as the documented alternative.
 TRT_ARMS <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
 
 pop <- adsl %>%
   filter(ACTARM %in% TRT_ARMS)
-
-teae <- adae %>%
-  filter(TRTEMFL == "Y")
-
-n_treated <- nrow(pop)
 
 # ------------------------------------------------------------------------------
 # 2. Plot 1 - AE severity distribution by treatment
@@ -75,7 +88,7 @@ n_treated <- nrow(pop)
 
 SEV_LEVELS <- c("MILD", "MODERATE", "SEVERE")
 
-sev_counts <- teae %>%
+sev_counts <- ae_all %>%
   mutate(AESEV = factor(AESEV, levels = SEV_LEVELS, ordered = TRUE)) %>%
   count(ACTARM, AESEV, name = "n_events")
 
@@ -89,9 +102,9 @@ arm_totals <- sev_counts %>%
 
 # Per-segment label positions, computed here rather than left to
 # position_stack(), which centres every label in its own band. Centring is right
-# for MILD and MODERATE - those bands are 65 to 286 events tall and have room to
-# spare - but fails for the shortest SEVERE segments: with only 6 and 10 events,
-# their midpoints land at 3 and 5 on the count scale and the label collides with
+# for MILD and MODERATE - those bands are 74 to 300 events tall and have room to
+# spare - but fails for the shortest SEVERE segments: with only 8 and 10 events,
+# their midpoints land at 4 and 5 on the count scale and the label collides with
 # the x axis. Those two are lifted just above the top edge of their segment.
 # Every other label, SEVERE included where the band is tall enough, keeps the
 # centred position it would have had.
@@ -121,7 +134,7 @@ LABEL_OFFSET <- 10
 # this figure's scale one line of label text is about 12 event units tall, so a
 # band of 20 units or more has room to centre the label inside itself with a
 # margin at each edge. Xanomeline Low Dose (25 severe events) clears that and
-# keeps its label in its own dark band; Placebo (6) and Xanomeline High Dose (10)
+# keeps its label in its own dark band; Placebo (8) and Xanomeline High Dose (10)
 # do not, and theirs are lifted. Expressing it as a height test rather than
 # naming the arms means the figure stays correct if the data change.
 
@@ -174,10 +187,10 @@ p_severity <- ggplot(sev_counts, aes(x = ACTARM, y = n_events, fill = AESEV)) +
   # Headroom for the total above the tallest bar.
   scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
   labs(
-    title = "Treatment-emergent adverse events by severity and treatment arm",
+    title = "Adverse events by severity and treatment arm",
     subtitle = paste0(
-      "Event records (not subjects); ", nrow(teae),
-      " treatment-emergent events in ", n_treated, " treated subjects"
+      "Event records (not subjects); all ", nrow(ae_all),
+      " adverse events in ", n_subjects_adae, " subjects with at least one event"
     ),
     x = NULL,
     y = "Number of adverse event records"
@@ -203,20 +216,21 @@ ggsave(out_p1, p_severity, width = 9, height = 6, dpi = 300)
 #
 # Reading of the spec: "top 10 most frequent AEs with 95% CI for incidence rates"
 # is taken as OVERALL incidence with the arms POOLED - one point estimate and one
-# interval per adverse event, over all 254 treated subjects. A per-arm reading
+# interval per adverse event, over all 225 subjects in ADAE. A per-arm reading
 # would give three intervals per term and answer a comparative question the spec
 # does not ask. Pooling is also what makes "top 10" well defined: ranked by total
 # subjects affected rather than by any one arm.
 
-ae_subject_level <- teae %>%
+ae_subject_level <- ae_all %>%
   distinct(USUBJID, AETERM)
 
 # Ties on the boundary count would otherwise make the tenth row depend on the
 # input row order. Sorting by descending subject count and then alphabetically by
 # term makes the cut deterministic and reproducible: exactly 10 rows, and the same
-# 10 on every run. (In the current data the rank-10 count of 17 is shared by two
-# terms, both of which fall inside the top 10, so nothing is dropped at the
-# boundary - but the tiebreak is what guarantees that.)
+# 10 on every run. (In the current data the rank-10 count of 17 is held by a
+# single term, so nothing sits on the boundary; the three-way tie at 21 subjects
+# falls at ranks 6 to 8, well inside. The tiebreak is what guarantees the cut
+# stays stable if those counts shift.)
 
 top10 <- ae_subject_level %>%
   count(AETERM, name = "n_subj") %>%
@@ -229,13 +243,13 @@ top10 <- ae_subject_level %>%
 
 cp_ci <- t(vapply(
   top10$n_subj,
-  function(k) binom.test(x = k, n = n_treated, conf.level = 0.95)$conf.int,
+  function(k) binom.test(x = k, n = n_subjects_adae, conf.level = 0.95)$conf.int,
   numeric(2)
 ))
 
 top10 <- top10 %>%
   mutate(
-    incidence_pct = 100 * n_subj / n_treated,
+    incidence_pct = 100 * n_subj / n_subjects_adae,
     ci_lower_pct  = 100 * cp_ci[, 1],
     ci_upper_pct  = 100 * cp_ci[, 2]
   )
@@ -270,11 +284,10 @@ p_incidence <- ggplot(top10, aes(x = incidence_pct,
     labels = function(x) paste0(x, "%")
   ) +
   labs(
-    title = "Ten most frequent treatment-emergent adverse events",
+    title = "Ten most frequent adverse events",
     subtitle = paste0(
       "Subject incidence with 95% Clopper-Pearson exact binomial intervals\n",
-      "All treatment arms pooled; Safety population, N = ", n_treated,
-      " treated subjects"
+      "All treatment arms pooled; N = ", n_subjects_adae, " subjects in ADAE"
     ),
     x = "Subjects affected (%)",
     y = NULL
@@ -295,38 +308,52 @@ ggsave(out_p2, p_incidence, width = 10, height = 6, dpi = 300)
 
 cat("\n================ VALIDATION ================\n")
 
-cat("\n[1] Population and TEAE subset\n")
-cat("  Treated subjects (denominator):", n_treated,
-    if (n_treated == 254L) " OK (expected 254)\n" else " MISMATCH (expected 254)\n")
-cat("  Screen Failure excluded:",
-    if (!"Screen Failure" %in% pop$ACTARM) "OK\n" else "FAILED - still present\n")
+cat("\n[1] Analysis population - all ADAE records\n")
+cat("  ADAE records used:", nrow(ae_all),
+    if (nrow(ae_all) == 1191L) " OK (expected 1191, the full dataset)\n"
+    else " MISMATCH (expected 1191)\n")
+cat("  No TRTEMFL filter applied:",
+    if (nrow(ae_all) == nrow(adae)) "OK\n" else "FAILED - records were dropped\n")
+cat("  Denominator, unique USUBJID in ADAE:", n_subjects_adae,
+    if (n_subjects_adae == 225L) " OK (matches the sample's n = 225)\n"
+    else " MISMATCH (sample states 225)\n")
 
+# The two populations the figures could have used, both reported so the choice is
+# auditable from the log rather than only from the source comments.
+# filter() rather than [ ] subsetting: TRTEMFL is NA on some records, and NA
+# subscripts select NA rows, which would add a phantom subject to the distinct
+# count (218 instead of 217). filter() drops NA conditions instead.
+teae_rows       <- adae %>% filter(TRTEMFL == "Y")
+n_teae_records  <- nrow(teae_rows)
+n_teae_subjects <- n_distinct(teae_rows$USUBJID)
 n_saffl <- sum(adsl$SAFFL == "Y", na.rm = TRUE)
-cat("  Safety population, SAFFL == 'Y':", n_saffl,
-    if (n_saffl == 254L) " OK (expected 254)\n" else " MISMATCH (expected 254)\n")
-cat("  SAFFL population and the 3 treatment arms are the same subjects:",
-    if (setequal(adsl$USUBJID[adsl$SAFFL == "Y"], pop$USUBJID)) "OK\n" else "FAILED\n")
-cat("  TEAE records:", nrow(teae),
-    if (nrow(teae) == 1122L) " OK (expected 1122)\n" else " MISMATCH (expected 1122)\n")
-cat("  All TEAE subjects present in the denominator population:",
-    if (all(teae$USUBJID %in% pop$USUBJID)) "OK\n" else "FAILED\n")
+
+cat("\n  For reference, the populations NOT used here:\n")
+cat("    TREATMENT-EMERGENT subset :", n_teae_records, "records,",
+    n_teae_subjects, "subjects  (the summary table's population)\n")
+cat("    SAFETY population (ADSL)  :", n_saffl,
+    "subjects  (the conventional incidence denominator)\n")
+cat("    Subjects treated but with no AE at all:", n_saffl - n_subjects_adae, "\n")
+cat("  Using 225 rather than", n_saffl,
+    "raises every incidence rate by a factor of",
+    sprintf("%.3f", n_saffl / n_subjects_adae), "\n")
 
 cat("\n[2] Plot 1 - AESEV x ACTARM record counts (the matrix behind the bars)\n")
 sev_matrix <- with(
-  teae,
+  ae_all,
   table(Severity = factor(AESEV, levels = SEV_LEVELS, ordered = TRUE),
         Arm = ACTARM, useNA = "ifany")
 )
 print(addmargins(sev_matrix))
 cat("  Severity factor levels in order:", paste(SEV_LEVELS, collapse = " < "), "\n")
-cat("  Records in matrix vs TEAE records:", sum(sev_matrix), "vs", nrow(teae),
-    if (sum(sev_matrix) == nrow(teae)) " OK\n" else " MISMATCH\n")
+cat("  Records in matrix vs ADAE records:", sum(sev_matrix), "vs", nrow(ae_all),
+    if (sum(sev_matrix) == nrow(ae_all)) " OK\n" else " MISMATCH\n")
 
 cat("\n[3] Plot 2 - top 10 terms, subject counts, incidence and 95% CI\n")
 print(
   top10 %>%
     mutate(
-      n_of_N        = paste0(n_subj, "/", n_treated),
+      n_of_N        = paste0(n_subj, "/", n_subjects_adae),
       incidence_pct = round(incidence_pct, 2),
       ci_lower_pct  = round(ci_lower_pct, 2),
       ci_upper_pct  = round(ci_upper_pct, 2)
