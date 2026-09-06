@@ -1,0 +1,7 @@
+# Question 4 (bonus) - GenAI clinical data assistant.
+# Versions are the ones this code was written and verified against.
+langchain==1.4.0
+langchain-openai==1.6.0
+pydantic==2.13.5
+pandas==2.1.1
+python-dotenv==1.2.3
