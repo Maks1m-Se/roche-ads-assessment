@@ -13,12 +13,12 @@ adverse event dataset (Question 4). Questions 1–3 are required and written in 
 Question 4 is the optional Python question. Every R question ships a plain-text run log
 as evidence that the script executes without errors.
 
-> **Status:** Questions 1 to 3 — the three required questions — are implemented and
-> validated. The built DS domain matches `pharmaversesdtm::ds` on all 12 required variables
-> with 0 mismatches, ADSL carries the four requested derivations, and Question 3 ships the
-> TEAE summary table and both figures. Every R script runs without errors or warnings, and
-> its log is committed as evidence. Question 4, the optional Python bonus, is still in
-> progress.
+> **Status:** All four questions are complete — the three required ones and the optional
+> Python bonus. The built DS domain matches `pharmaversesdtm::ds` on all 12 required
+> variables with 0 mismatches, ADSL carries the four requested derivations, Question 3
+> ships the TEAE summary table and both figures, and the Question 4 agent has been run
+> against a real LLM. Every script runs without errors or warnings, and its log is
+> committed as evidence.
 
 ## 2. Repository structure
 
@@ -44,7 +44,13 @@ roche-ads-assessment/
 │   ├── run_log_02.txt                     console log for the figures script
 │   ├── ae_severity_by_treatment.png       AE severity distribution by treatment arm
 │   └── ae_top10_incidence_ci.png          top 10 AEs with 95% Clopper-Pearson CIs
-└── question_4_genai/                      Python GenAI assistant (bonus)
+└── question_4_genai/
+    ├── clinical_agent.py                  ClinicalTrialDataAgent: parse, gate, execute
+    ├── test_agent.py                      three example queries, one per column
+    ├── adae.csv                           AE data exported from pharmaversesdtm::ae
+    ├── requirements.txt                   pinned Python dependencies
+    ├── .env.example                       key template; the real .env is gitignored
+    └── run_log.txt                        console transcript of a real LLM run
 ```
 
 Folder and file names follow the assessment specification **verbatim**, including the
@@ -88,10 +94,35 @@ not. This is intentional, not an oversight.
 | | |
 |---|---|
 | **Objective** | Build a `ClinicalTrialDataAgent` that uses an LLM to map a free-text clinical question onto the correct adverse event column, without hard-coded keyword rules. |
-| **Input datasets** | `adae.csv`, exported from `pharmaversesdtm::ae` (see spec note 1 below). |
-| **Output artifacts** | An LLM call returning structured JSON (`target_column`, `filter_value`), an execution function applying the corresponding pandas filter and returning the count of unique `USUBJID` values plus the list of matching subject IDs, and a test script running three example queries. |
-| **How to run** | To be documented when the solution is implemented. |
-| **Log evidence** | Printed output of the test script (this question does not use the R log convention). |
+| **Input datasets** | `question_4_genai/adae.csv`, exported from `pharmaversesdtm::ae` (see spec note 1 below) with `write.csv(pharmaversesdtm::ae, "question_4_genai/adae.csv", row.names = FALSE)`. 1,191 records, 225 subjects. |
+| **Output artifacts** | `clinical_agent.py` (agent and query logic), `test_agent.py` (three example queries), `requirements.txt`, `.env.example`. |
+| **How to run** | `pip install -r question_4_genai/requirements.txt`, copy `.env.example` to `.env` and add your key, then `python question_4_genai/test_agent.py`. |
+| **Log evidence** | `question_4_genai/run_log.txt` — printed output of the test script (this question does not use the R log convention). |
+
+**Architecture.** Exactly one non-deterministic step, and it is tightly fenced:
+
+```
+NL question → LLM parse (LangChain with_structured_output)
+            → QuerySpec (Pydantic, validated)
+            → allowlist gate (column must be queryable and present)
+            → deterministic pandas filter
+            → unique-subject count + sorted subject IDs
+```
+
+The LLM chooses only *which column* and *which value*. It never writes code, never
+sees the dataframe and never touches the result. Everything downstream is ordinary
+pandas — there is no `eval()`, no query string assembled from model output, and no
+model-generated code executed anywhere. The allowlist gate is the safety boundary:
+a column must appear both in the agent's catalogue (`AESEV`, `AETERM`, `AESOC`) and
+in the loaded dataframe before it is ever used to index it.
+
+**Running without a key.** With no `OPENAI_API_KEY` the agent prints
+`[LLM] No OPENAI_API_KEY found - using mock responses.` and parses with a small
+deterministic rule table, so the pipeline is demonstrable offline. Every result is
+tagged `source="openai"` or `source="mock"`, so a transcript is never ambiguous
+about which parser produced it. The mock triggers **only** on a missing key — if a
+key is present and the call fails, the error surfaces rather than silently
+degrading to keyword matching.
 
 ## 4. Log convention
 
@@ -165,6 +196,8 @@ to reverse-engineer it from the code.
 | 11 | Q3 | The denominator population excludes the Screen Failure arm | `adsl` has four `ACTARM` values including `"Screen Failure"` (52 subjects who were screened but never treated); `adae` has only three. Screen failures cannot have a treatment-emergent adverse event, so the denominator is the three treatment arms, N = 254, not all 306 subjects. Percentages divide by the treated subjects in each arm (86 / 72 / 96). Including the untreated subjects would deflate every incidence rate. |
 | 12 | Q3 | Plot 1 counts events, not subjects — the one place in Question 3 that does | The severity figure describes the adverse events themselves: of everything that occurred, how much was mild, moderate or severe, and how much of it there was per arm. Collapsing to subject level would force one severity per subject and discard exactly what is being plotted, since a subject with four mild events and one severe event contributes five events at five severities. This is a deliberate departure from note 3, which governs the incidence outputs — the summary table and Plot 2 — and the figure's subtitle says "event records (not subjects)" so a reader is never left to infer which one they are looking at. |
 | 13 | Q3 | Plot 2 pools the arms, and the interval is computed rather than approximated | The spec asks for "the top 10 most frequent AEs with 95% CI for incidence rates", read as one point estimate and one interval per event over all treated subjects, not three per event. A per-arm reading would answer a comparative question the spec does not pose, and pooling is what makes "top 10" well defined — ranked by total subjects affected rather than by any single arm. The denominator is the Safety population, `SAFFL == "Y"`, which selects the same 254 subjects as the three treatment arms of note 11 (the script asserts the two definitions coincide) and is the standard denominator for adverse event incidence. Intervals come from `stats::binom.test()`, the established exact binomial implementation, per note 5; nothing is hand-rolled and no normal approximation is used, which matters at the low incidences seen here. |
+| 14 | Q4 | Where the LLM sits in the pipeline | The model is confined to one step: turning free text into a `target_column` / `filter_value` pair, returned as a validated Pydantic `QuerySpec` via LangChain's `with_structured_output()`. It never generates code and never receives the data. Everything after the parse is deterministic pandas, so the same question always yields the same rows, and the agent's behaviour can be audited without re-running the model. The allowlist gate between the two halves rejects any column outside the queryable catalogue, so a wrong or adversarial parse cannot reach the dataframe. |
+| 15 | Q4 | Behaviour when no API key is present | A missing key selects a deterministic mock parser so the pipeline runs offline, and the active mode is printed at startup with every result tagged `openai` or `mock`. The fallback is deliberately narrow: it covers a missing key only. A key that is present but fails — rate limit, network, bad model name — raises, because silently returning keyword-matched results would make a broken run indistinguishable from a working one. |
 
 *Extend this table as further decisions are made — one row per decision, newest at the
 bottom.*
