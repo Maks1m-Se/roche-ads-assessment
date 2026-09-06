@@ -28,6 +28,8 @@ roche-ads-assessment/
 ├── .gitignore                             R/OS ignores + assessment materials
 ├── question_1_sdtm/
 │   ├── 01_create_ds_domain.R              builds the SDTM DS domain
+│   ├── sdtm_ct.csv                        CT input: codelists for DSDECOD (C66727),
+│   │                                      VISIT and VISITNUM
 │   ├── run_log.txt                        console log, proof of error-free run
 │   └── ds.csv                             built DS domain, 0 mismatches vs reference
 ├── question_2_adam/
