@@ -201,6 +201,11 @@ class ClinicalTrialDataAgent:
             raise ValueError(f"{self.data_file} is missing required columns: {missing}")
 
         self.model_name = model
+        # load_dotenv() above has already copied .env into os.environ, so this
+        # lookup sees both sources and the mock path is taken only when the key is
+        # absent from each. Clearing OPENAI_API_KEY in the shell is therefore not
+        # enough to force the offline path - .env still supplies it, and the run
+        # will make real API calls. Rename or remove .env to force the mock.
         api_key = os.environ.get("OPENAI_API_KEY")
         self.use_llm = bool(api_key)
 
@@ -221,14 +226,30 @@ class ClinicalTrialDataAgent:
 
     def parse_question(self, question: str) -> tuple[QuerySpec, str]:
         """Turn free text into a QuerySpec. Returns (spec, source)."""
+        # The mock is chosen here and only here: on the absence of a key, decided
+        # once at construction. A missing key is a *configuration* state, known
+        # before any work is attempted, and the offline path is a legitimate way
+        # to run this program - so falling back to it is honest.
         if not self.use_llm:
             return _mock_parse(question), "mock"
 
-        # No try/except around this call, deliberately. The mock exists to cover a
-        # missing key, not to paper over a rate limit, a network failure or a bad
-        # model name. Silently degrading to keyword matching would make a broken
-        # run look like a working one, and the caller could not tell the
-        # difference. A real failure should surface.
+        # Deliberately no try/except around the call below.
+        #
+        # The tempting version wraps this in `except Exception: return
+        # _mock_parse(...)`, so the demo never crashes. That would be the wrong
+        # trade here. A rate limit, an expired key, a network failure or a
+        # retired model name are all *runtime faults*, not configuration
+        # choices, and the keyword table would answer the three rehearsed
+        # example questions correctly even while the model was completely
+        # unreachable. The transcript would then show plausible results for a run
+        # in which the LLM - the entire point of the exercise - never
+        # participated. Nobody reading the log could tell the two apart.
+        #
+        # Failing loudly costs a stack trace. Failing quietly costs the reader's
+        # ability to trust every other line of the output. The `source` tag on
+        # each result narrows the window further but does not close it, since a
+        # per-call fallback would have to tag itself "mock" mid-run and could
+        # easily be skimmed past.
         spec = self._parser.invoke(
             [("system", SYSTEM_PROMPT), ("human", question)]
         )
@@ -246,13 +267,37 @@ class ClinicalTrialDataAgent:
         index the dataframe - there is no eval(), no query string built from
         model output, and no model-generated code executed anywhere.
         """
+        # Normalised before testing, not after: the model may answer "aesev" or
+        # " AESEV ". Those are the same column and should pass, so the gate
+        # compares the normalised form and returns it, guaranteeing that the
+        # exact string tested is the exact string later used to index the frame.
+        # Validating one spelling and indexing with another is how allowlists
+        # develop holes.
         column = spec.target_column.strip().upper()
 
+        # Check one - is this a column the agent is *willing* to answer over?
+        #
+        # An allowlist, not a denylist. The set of harmful inputs is unbounded
+        # and unknowable; the set of columns this agent answers questions about
+        # is three entries long and written down. Only the second is worth
+        # enumerating. This also blocks perfectly real columns like USUBJID or
+        # AESER - not because they are dangerous, but because the agent has no
+        # prompt describing them and would be guessing at their values.
         if column not in MAPPABLE_COLUMNS:
             raise InvalidQueryColumnError(
                 f"Model returned column '{spec.target_column}', which is not "
                 f"queryable. Allowed columns: {', '.join(MAPPABLE_COLUMNS)}."
             )
+
+        # Check two - does the column actually exist in the data loaded now?
+        #
+        # Redundant only while the catalogue and the CSV agree. They are two
+        # separate artefacts that drift independently: the catalogue is edited
+        # here, the CSV is regenerated from R. If someone adds a column to
+        # MAPPABLE_COLUMNS that the export does not carry, the first check waves
+        # it through and pandas raises a bare KeyError from inside the filter -
+        # an error about the data that is really an error about configuration.
+        # This check turns that into a message naming the file and the column.
         if column not in self.df.columns:
             raise InvalidQueryColumnError(
                 f"Column '{column}' is allowlisted but absent from "
@@ -265,10 +310,29 @@ class ClinicalTrialDataAgent:
     def execute(self, spec: QuerySpec) -> tuple[int, list[str]]:
         """Run the validated filter. Pure pandas, fully deterministic."""
         column = self._validate_spec(spec)
+
+        # Normalise the value the same way on both sides of the comparison.
+        #
+        # SDTM stores these fields uppercase - MODERATE, HEADACHE, CARDIAC
+        # DISORDERS - but the model is a language model, and the casing it
+        # returns tracks the question it was asked. "Moderate severity" in the
+        # prompt invites "Moderate" back, and the surrounding whitespace of a
+        # generated string is not something to rely on either. None of that
+        # changes which subjects the reader is asking about.
+        #
+        # The alternative - an exact match - would fail silently and in the worst
+        # possible way: zero subjects, no error, a result that looks like a
+        # clinical finding ("nobody had moderate events") when it is really a
+        # string-casing artefact. Empty results are legitimate here, which is
+        # exactly why they must never be manufactured by formatting.
+        #
+        # This is normalisation, not fuzzy matching. "MODERATE" still has to
+        # equal "MODERATE"; a misspelling or a wrong term still returns nothing,
+        # because guessing what the model meant is not this layer's job.
         wanted = spec.filter_value.strip().upper()
 
-        # AE values are stored uppercase; compare case-insensitively so a model
-        # that answers "Moderate" still matches "MODERATE".
+        # astype(str) guards the column side: a CSV column that happens to parse
+        # as numeric, or that carries NaN, has no .str accessor otherwise.
         matches = self.df[self.df[column].astype(str).str.upper() == wanted]
 
         # An empty match is a legitimate answer - no subject had that event - and

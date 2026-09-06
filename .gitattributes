@@ -1,0 +1,8 @@
+# Line-ending normalisation for future commits. Existing committed files are
+# deliberately NOT renormalised (no `git add --renormalize`), so every log and
+# output already in history stays byte-identical to the run that produced it.
+* text=auto
+*.R   text eol=lf
+*.py  text eol=lf
+*.csv text eol=lf
+*.txt text eol=lf
