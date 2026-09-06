@@ -13,11 +13,12 @@ adverse event dataset (Question 4). Questions 1–3 are required and written in 
 Question 4 is the optional Python question. Every R question ships a plain-text run log
 as evidence that the script executes without errors.
 
-> **Status:** Questions 1 and 2 are implemented and validated — the built DS domain matches
-> `pharmaversesdtm::ds` on all 12 required variables with 0 mismatches, and ADSL carries the
-> four requested derivations from a warning-free run. Question 3's TEAE summary table is
-> complete; its two figures (`02_create_visualizations.R`) and Question 4 are still in
-> progress. Output artifacts and run logs appear as each question is completed.
+> **Status:** Questions 1 to 3 — the three required questions — are implemented and
+> validated. The built DS domain matches `pharmaversesdtm::ds` on all 12 required variables
+> with 0 mismatches, ADSL carries the four requested derivations, and Question 3 ships the
+> TEAE summary table and both figures. Every R script runs without errors or warnings, and
+> its log is committed as evidence. Question 4, the optional Python bonus, is still in
+> progress.
 
 ## 2. Repository structure
 
@@ -38,8 +39,9 @@ roche-ads-assessment/
 │   ├── ae_summary_table.html              TEAE table, SOC rows with nested terms
 │   ├── run_log_01.txt                     console log for the table script
 │   ├── 02_create_visualizations.R         two AE figures via {ggplot2}
-│   ├── run_log_02.txt                     console log for the figures script (pending)
-│   └── *.png                              two AE plots (pending)
+│   ├── run_log_02.txt                     console log for the figures script
+│   ├── ae_severity_by_treatment.png       AE severity distribution by treatment arm
+│   └── ae_top10_incidence_ci.png          top 10 AEs with 95% Clopper-Pearson CIs
 └── question_4_genai/                      Python GenAI assistant (bonus)
 ```
 
@@ -159,6 +161,8 @@ to reverse-engineer it from the code.
 | 9 | Q1 | Unscheduled visit numbers | Six unscheduled visit labels are absent from the CT `VISITNUM` / `VISIT` codelists. Derived the number from the label itself, following the CT's own precedent `"Unscheduled 3.1" -> 3.1`. 8 records affected. |
 | 10 | Q3 | Number of log files | The deliverables list is singular ("A text file/log file") for Questions 1 and 2, which have one script each, and plural ("Text files/log files") for Question 3, the only question with two scripts. Question 3 therefore ships one log per script, `run_log_01.txt` and `run_log_02.txt`; Questions 1 and 2 keep a single `run_log.txt`. |
 | 11 | Q3 | The denominator population excludes the Screen Failure arm | `adsl` has four `ACTARM` values including `"Screen Failure"` (52 subjects who were screened but never treated); `adae` has only three. Screen failures cannot have a treatment-emergent adverse event, so the denominator is the three treatment arms, N = 254, not all 306 subjects. Percentages divide by the treated subjects in each arm (86 / 72 / 96). Including the untreated subjects would deflate every incidence rate. |
+| 12 | Q3 | Plot 1 counts events, not subjects — the one place in Question 3 that does | The severity figure describes the adverse events themselves: of everything that occurred, how much was mild, moderate or severe, and how much of it there was per arm. Collapsing to subject level would force one severity per subject and discard exactly what is being plotted, since a subject with four mild events and one severe event contributes five events at five severities. This is a deliberate departure from note 3, which governs the incidence outputs — the summary table and Plot 2 — and the figure's subtitle says "event records (not subjects)" so a reader is never left to infer which one they are looking at. |
+| 13 | Q3 | Plot 2 pools the arms, and the interval is computed rather than approximated | The spec asks for "the top 10 most frequent AEs with 95% CI for incidence rates", read as one point estimate and one interval per event over all treated subjects, not three per event. A per-arm reading would answer a comparative question the spec does not pose, and pooling is what makes "top 10" well defined — ranked by total subjects affected rather than by any single arm. The denominator is the Safety population, `SAFFL == "Y"`, which selects the same 254 subjects as the three treatment arms of note 11 (the script asserts the two definitions coincide) and is the standard denominator for adverse event incidence. Intervals come from `stats::binom.test()`, the established exact binomial implementation, per note 5; nothing is hand-rolled and no normal approximation is used, which matters at the low incidences seen here. |
 
 *Extend this table as further decisions are made — one row per decision, newest at the
 bottom.*

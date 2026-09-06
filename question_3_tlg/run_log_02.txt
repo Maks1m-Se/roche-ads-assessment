@@ -36,7 +36,7 @@ Severity   Placebo Xanomeline High Dose Xanomeline Low Dose  Sum
   Subject counts strictly non-increasing (descending sort): OK
 
 [4] Output files
-   question_3_tlg/ae_severity_by_treatment.png : written = TRUE , bytes = 59744  OK
+   question_3_tlg/ae_severity_by_treatment.png : written = TRUE , bytes = 73594  OK
    question_3_tlg/ae_top10_incidence_ci.png : written = TRUE , bytes = 61194  OK
 
 ============== END VALIDATION ==============
