@@ -1,13 +1,13 @@
 # Roche ADS Programmer Coding Assessment
 
-[1. Overview](#1-overview) ·
-[2. Repository structure](#2-repository-structure) ·
-[3. Reproducing everything](#3-reproducing-everything) ·
-[4. Questions](#4-questions) ·
-[5. Log convention](#5-log-convention) ·
-[6. Environment & reproducibility](#6-environment--reproducibility) ·
-[7. Notes on spec decisions](#7-notes-on-spec-decisions) ·
-[8. References](#8-references)
+* [1. Overview](#1-overview)
+* [2. Repository structure](#2-repository-structure)
+* [3. Reproducing everything](#3-reproducing-everything)
+* [4. Questions](#4-questions)
+* [5. Log convention](#5-log-convention)
+* [6. Environment & reproducibility](#6-environment--reproducibility)
+* [7. Notes on spec decisions](#7-notes-on-spec-decisions)
+* [8. References](#8-references)
 
 ## 1. Overview
 
