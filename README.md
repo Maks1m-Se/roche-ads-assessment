@@ -13,10 +13,11 @@ adverse event dataset (Question 4). Questions 1–3 are required and written in 
 Question 4 is the optional Python question. Every R question ships a plain-text run log
 as evidence that the script executes without errors.
 
-> **Status:** Question 1 is implemented and validated — the built DS domain matches
-> `pharmaversesdtm::ds` on all 12 required variables with 0 mismatches. Questions 2 to 4
-> are in progress; their scripts currently hold header documentation blocks only. Output
-> artifacts and run logs appear as each question is completed.
+> **Status:** Questions 1 and 2 are implemented and validated — the built DS domain matches
+> `pharmaversesdtm::ds` on all 12 required variables with 0 mismatches, and ADSL carries the
+> four requested derivations from a warning-free run. Question 3's TEAE summary table is
+> complete; its two figures (`02_create_visualizations.R`) and Question 4 are still in
+> progress. Output artifacts and run logs appear as each question is completed.
 
 ## 2. Repository structure
 
@@ -31,14 +32,14 @@ roche-ads-assessment/
 ├── question_2_adam/
 │   ├── create_adsl.R                      builds the ADaM ADSL dataset
 │   ├── run_log.txt                        console log, proof of error-free run
-│   └── <adsl dataset>                     resulting ADSL (format TBD)
+│   └── adsl.csv                           resulting ADSL with the four derivations
 ├── question_3_tlg/
 │   ├── 01_create_ae_summary_table.R       TEAE summary table via {gtsummary}
-│   ├── 02_create_visualizations.R         two AE figures via {ggplot2}
+│   ├── ae_summary_table.html              TEAE table, SOC rows with nested terms
 │   ├── run_log_01.txt                     console log for the table script
-│   ├── run_log_02.txt                     console log for the figures script
-│   ├── ae_summary_table.html              table output (or .docx / .pdf)
-│   └── *.png                              two AE plots
+│   ├── 02_create_visualizations.R         two AE figures via {ggplot2}
+│   ├── run_log_02.txt                     console log for the figures script (pending)
+│   └── *.png                              two AE plots (pending)
 └── question_4_genai/                      Python GenAI assistant (bonus)
 ```
 
@@ -148,7 +149,7 @@ to reverse-engineer it from the code.
 | # | Question | Point | Decision / rationale |
 |---|---|---|---|
 | 1 | Q4 | The input file is named `adae.csv`, but the spec sources it from `pharmaversesdtm::ae` — an SDTM AE dataset, not an ADaM ADAE. | Follow the spec literally: export `pharmaversesdtm::ae` and save it under the file name `adae.csv`. The columns the agent must map to (`AESEV`, `AETERM`, `AESOC`) all exist in SDTM `ae`. |
-| 2 | Q3 | Table rows: `AETERM` **or** `AESOC` — the spec permits either. | TBD — choice and rationale to be documented here once the table is built. |
+| 2 | Q3 | Table rows: `AETERM` **or** `AESOC` — the spec permits either. | Used both, nested — `AESOC` as grouping rows with `AETERM` preferred terms underneath, matching the FDA Table 10 layout in the sample output. The 230 distinct `AETERM` values in the TEAE subset would be an unreadable flat table on their own; the 23 system organ classes give it structure. `tbl_hierarchical()` supports the nesting natively. |
 | 3 | Q3 | AE incidence counting level | Count at subject level, not record level — a subject with five HEADACHE records is one subject with headache. Applies to the summary table and to Plot 2. |
 | 4 | Q3 | Denominator for percentages | Subjects per treatment arm from `pharmaverseadam::adsl`, not subjects with AEs from `adae`. This is why the spec lists `adsl` as a Q3 input. |
 | 5 | Q3 | Confidence interval method for Plot 2 | Clopper-Pearson, as stated in the sample output subtitle in the assessment PDF. Use an established function, do not hand-roll. |
@@ -157,6 +158,7 @@ to reverse-engineer it from the code.
 | 8 | Q1 | `DSSEQ` sequencing rule | Subjects have multiple DS records sharing a visit and a date, so a deterministic order was needed. Reverse-engineered against the reference: it sequences purely by collection/entry order within subject (raw row order), not by visit number or date. Subject `01-705-1382` confirms it — its randomization milestone was entered after a later-visit event and the reference preserves that raw order rather than sorting by visit. Implemented as `rec_vars = c("USUBJID", <raw row order>)`. |
 | 9 | Q1 | Unscheduled visit numbers | Six unscheduled visit labels are absent from the CT `VISITNUM` / `VISIT` codelists. Derived the number from the label itself, following the CT's own precedent `"Unscheduled 3.1" -> 3.1`. 8 records affected. |
 | 10 | Q3 | Number of log files | The deliverables list is singular ("A text file/log file") for Questions 1 and 2, which have one script each, and plural ("Text files/log files") for Question 3, the only question with two scripts. Question 3 therefore ships one log per script, `run_log_01.txt` and `run_log_02.txt`; Questions 1 and 2 keep a single `run_log.txt`. |
+| 11 | Q3 | The denominator population excludes the Screen Failure arm | `adsl` has four `ACTARM` values including `"Screen Failure"` (52 subjects who were screened but never treated); `adae` has only three. Screen failures cannot have a treatment-emergent adverse event, so the denominator is the three treatment arms, N = 254, not all 306 subjects. Percentages divide by the treated subjects in each arm (86 / 72 / 96). Including the untreated subjects would deflate every incidence rate. |
 
 *Extend this table as further decisions are made — one row per decision, newest at the
 bottom.*
